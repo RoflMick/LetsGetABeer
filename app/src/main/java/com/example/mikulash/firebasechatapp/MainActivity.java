@@ -18,6 +18,7 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.example.mikulash.firebasechatapp.Fragments.ChatsFragment;
+import com.example.mikulash.firebasechatapp.Fragments.ProfileFragment;
 import com.example.mikulash.firebasechatapp.Fragments.UsersFragment;
 import com.example.mikulash.firebasechatapp.Model.User;
 import com.google.firebase.auth.FirebaseAuth;
@@ -63,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
                 if (user.getImageURL().equals("default")){
                     imageProfile.setImageResource(R.mipmap.ic_launcher);
                 } else{
-                    Glide.with(MainActivity.this).load(user.getImageURL()).into(imageProfile);
+                    Glide.with(getApplicationContext()).load(user.getImageURL()).into(imageProfile);
                 }
             }
 
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         ViewPagerAdapter viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager());
         viewPagerAdapter.addFragment(new ChatsFragment(), "Chats");
         viewPagerAdapter.addFragment(new UsersFragment(), "Users");
+        viewPagerAdapter.addFragment(new ProfileFragment(), "Profile");
         viewPager.setAdapter(viewPagerAdapter);
 
         tabLayout.setupWithViewPager(viewPager);
