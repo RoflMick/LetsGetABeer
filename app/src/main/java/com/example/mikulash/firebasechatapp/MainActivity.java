@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
                 User user = dataSnapshot.getValue(User.class);
                 username.setText(user.getUsername());
                 if (user.getImageURL().equals("default")){
-                    imageProfile.setImageResource(R.mipmap.ic_launcher);
+                    imageProfile.setImageResource(R.drawable.default_profile);
                 } else{
                     Glide.with(getApplicationContext()).load(user.getImageURL()).into(imageProfile);
                 }

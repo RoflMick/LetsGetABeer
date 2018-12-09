@@ -168,7 +168,7 @@ public class ProfileFragment extends Fragment {
                 User user = dataSnapshot.getValue(User.class);
                 username.setText(user.getUsername());
                 if (user.getImageURL().equals("default")) {
-                    imageProfile.setImageResource(R.mipmap.ic_launcher);
+                    imageProfile.setImageResource(R.drawable.default_profile);
                 } else {
                     if (getActivity() == null) {
                         return;
@@ -280,9 +280,8 @@ public class ProfileFragment extends Fragment {
         final StorageReference bitmapStorageReference = storageReference.child(System.currentTimeMillis() + "_cameraBitmap");
 
         //Put image to Firebase
-        UploadTask uploadTask = bitmapStorageReference.putBytes(dataBAOS);
-
-        Task<Uri> urlTask = uploadTask.continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
+        uploadStorageTask = bitmapStorageReference.putBytes(dataBAOS);
+        uploadStorageTask.continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
             @Override
             public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
                 if (!task.isSuccessful()) {

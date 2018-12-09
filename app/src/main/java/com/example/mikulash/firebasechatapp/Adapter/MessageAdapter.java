@@ -63,7 +63,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         holder.show_time.setText(simpleDateFormat.format(chat.getDateTime()));
 
         if (imageURL.equals("default")){
-            holder.imageProfile.setImageResource(R.mipmap.ic_launcher);
+            holder.imageProfile.setImageResource(R.drawable.default_profile);
         } else{
             Glide.with(mContext).load(imageURL).into(holder.imageProfile);
         }

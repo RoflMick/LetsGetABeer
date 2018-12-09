@@ -25,7 +25,7 @@
             android:layout_width="150dp"
             android:layout_height="150dp"
             android:id="@+id/imageProfile"
-            android:src="@mipmap/ic_launcher"
+            android:src="@drawable/default_profile"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="60dp"/>
 
@@ -49,17 +49,16 @@
             android:layout_below="@id/username"
             android:layout_centerHorizontal="true"
             android:layout_marginTop="20dp"/>
+
+        <Button
+            android:id="@+id/buttonOpenCamera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_below="@id/butDefaultImage"
+            android:layout_marginTop="20dp"
+            android:text="Button" />
         
     </RelativeLayout>
-
-    <Button
-        android:id="@+id/buttonOpenCamera"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="73dp"
-        android:layout_marginBottom="129dp"
-        android:text="Button" />
 
 </RelativeLayout>
