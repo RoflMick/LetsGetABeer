@@ -1,20 +1,24 @@
 package com.example.mikulash.firebasechatapp.Fragments;
 
-import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.FileProvider;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -27,6 +31,7 @@ import com.example.mikulash.firebasechatapp.R;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -40,6 +45,11 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.StorageTask;
 import com.google.firebase.storage.UploadTask;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -47,6 +57,9 @@ import de.hdodenhof.circleimageview.CircleImageView;
 import static android.app.Activity.RESULT_OK;
 
 public class ProfileFragment extends Fragment {
+
+    //TODO
+    Button butOpenCamera;
 
     //Layout
     CircleImageView imageProfile;
@@ -61,8 +74,21 @@ public class ProfileFragment extends Fragment {
     //Storage
     StorageReference storageReference;
     private static final int PROFILE_IMAGE_REQUEST = 1;
+    private static final int PROFILE_CAMERA_REQUEST = 2;
     private Uri imageUri;
     private StorageTask uploadStorageTask;
+
+    //AlertDialog
+    AlertDialog.Builder builder;
+    AlertDialog alertDialog;
+
+    //Accelerometer
+    private SensorManager sensorManager;
+    private Sensor accelerometerSensor;
+    private SensorEventListener accelerometerSensorEventListener;
+    private float mAccel; //acceleration apart from gravity
+    private float mAccelCurrent; //current acceleration including gravity
+    private float mAccelLast; //last acceleration including gravity
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -74,12 +100,59 @@ public class ProfileFragment extends Fragment {
         username = view.findViewById(R.id.username);
         progressBar = view.findViewById(R.id.progressBar);
         butDefaultImage = view.findViewById(R.id.butDefaultImage);
+        butOpenCamera = view.findViewById(R.id.buttonOpenCamera);
 
         firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         reference = FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid());
         storageReference = FirebaseStorage.getInstance().getReference("imageProfiles");
 
-        //Button Default Image
+        //AlertDialog
+        builder = new AlertDialog.Builder(getContext());
+        builder.setView(R.layout.progress_bar);
+        builder.setCancelable(false);
+        alertDialog = builder.create();
+
+        //Accelerometer
+        sensorManager = (SensorManager) getContext().getSystemService(getContext().SENSOR_SERVICE);
+        accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mAccel = 0.00f;
+        mAccelCurrent = SensorManager.GRAVITY_EARTH;
+        mAccelLast = SensorManager.GRAVITY_EARTH;
+        if (accelerometerSensor == null) {
+            Toast.makeText(getContext(), "Device does not support Accelerometer features.", Toast.LENGTH_SHORT).show();
+        }
+
+        //TODO
+        butOpenCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openCamera();
+            }
+        });
+
+        accelerometerSensorEventListener = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                float x = event.values[0];
+                float y = event.values[1];
+                float z = event.values[2];
+                mAccelLast = mAccelCurrent;
+                mAccelCurrent = (float) Math.sqrt((double) (x*x + y*y + z*z));
+                float delta = mAccelCurrent - mAccelLast;
+                mAccel = mAccel * 0.9f + delta; // perform low-cut filter
+
+                if (mAccel > 15) {
+                    openCamera();
+                }
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
+
+        //On Default Image Button Clicked
         butDefaultImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -110,6 +183,7 @@ public class ProfileFragment extends Fragment {
             }
         });
 
+        //On Image Clicked
         imageProfile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -118,6 +192,23 @@ public class ProfileFragment extends Fragment {
         });
 
         return view;
+    }
+
+    private void openCamera() {
+        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        startActivityForResult(intent, PROFILE_CAMERA_REQUEST);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        sensorManager.registerListener(accelerometerSensorEventListener, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        sensorManager.unregisterListener(accelerometerSensorEventListener);
     }
 
     private void openImageSelection () {
@@ -135,16 +226,11 @@ public class ProfileFragment extends Fragment {
 
     private void uploadImage () {
         if (imageUri != null) {
-
-            //Alert builder
-            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setView(R.layout.progress_bar);
-            builder.setCancelable(false);
-            final AlertDialog alertDialog = builder.create();
             alertDialog.show();
 
             final StorageReference fileStorageReference = storageReference.child(System.currentTimeMillis() + "." + getFileExtension(imageUri));
 
+            //Put image to Firebase
             uploadStorageTask = fileStorageReference.putFile(imageUri);
             uploadStorageTask.continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
                 @Override
@@ -181,17 +267,83 @@ public class ProfileFragment extends Fragment {
         }
     }
 
+    private void uploadCameraImage(Intent data) {
+        alertDialog.show();
+
+        //Get the image taken from camera
+        Bundle extras = data.getExtras();
+        final Bitmap bitmap = (Bitmap) data.getExtras().get("data");
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        byte[] dataBAOS = baos.toByteArray();
+
+        final StorageReference bitmapStorageReference = storageReference.child(System.currentTimeMillis() + "_cameraBitmap");
+
+        //Put image to Firebase
+        UploadTask uploadTask = bitmapStorageReference.putBytes(dataBAOS);
+
+        Task<Uri> urlTask = uploadTask.continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
+            @Override
+            public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
+                }
+                return bitmapStorageReference.getDownloadUrl();
+            }
+        }).addOnCompleteListener(new OnCompleteListener<Uri>() {
+            @Override
+            public void onComplete(@NonNull Task<Uri> task) {
+                if (task.isSuccessful()) {
+                    Uri downloadUri = task.getResult();
+                    String strUri = downloadUri.toString();
+
+                    reference = FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid());
+                    HashMap<String, Object> map = new HashMap<>();
+                    map.put("imageURL", strUri);
+                    reference.updateChildren(map);
+
+                    alertDialog.dismiss();
+                }
+            }
+        });
+    }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        //Image Upload
         if (requestCode == PROFILE_IMAGE_REQUEST && resultCode == RESULT_OK && data!= null && data.getData() != null) {
             imageUri = data.getData();
             if (uploadStorageTask != null && uploadStorageTask.isInProgress()) {
-                Toast.makeText(getContext(), "Uploading is in progress.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Image Uploading is in progress.", Toast.LENGTH_SHORT).show();
             } else {
                 uploadImage();
             }
+        }
+
+        //Camera Image Upload
+        if (requestCode == PROFILE_CAMERA_REQUEST && resultCode == RESULT_OK) {
+            imageUri = data.getData();
+            if (uploadStorageTask != null && uploadStorageTask.isInProgress()) {
+                Toast.makeText(getContext(), "Image Uploading is in progress.", Toast.LENGTH_SHORT).show();
+            } else {
+                uploadCameraImage(data);
+            }
+//            fileStorageReference.putFile(photoURI).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+//                @Override
+//                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+//                    alertDialog.dismiss();
+//                    Toast.makeText(getContext(), "succesdasfsdf", Toast.LENGTH_SHORT).show();
+//                }
+//            });
+
+            /*
+            if (uploadStorageTask != null && uploadStorageTask.isInProgress()) {
+                Toast.makeText(getContext(), "Photo Uploading is in progress.", Toast.LENGTH_SHORT).show();
+            } else {
+                uploadImage();
+            }*/
         }
     }
 }
