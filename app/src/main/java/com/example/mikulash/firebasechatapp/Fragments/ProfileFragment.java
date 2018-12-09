@@ -1,6 +1,8 @@
 package com.example.mikulash.firebasechatapp.Fragments;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -75,16 +77,18 @@ public class ProfileFragment extends Fragment {
 
         firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         reference = FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid());
-
         storageReference = FirebaseStorage.getInstance().getReference("imageProfiles");
 
+        //Button Default Image
         butDefaultImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                reference.child("imageURL").setValue("default");
+                Toast.makeText(getContext(), "Profile picture has been set to default.", Toast.LENGTH_SHORT).show();
             }
         });
 
+        //On Image changed
         reference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -93,6 +97,9 @@ public class ProfileFragment extends Fragment {
                 if (user.getImageURL().equals("default")) {
                     imageProfile.setImageResource(R.mipmap.ic_launcher);
                 } else {
+                    if (getActivity() == null) {
+                        return;
+                    }
                     Glide.with(getContext()).load(user.getImageURL()).into(imageProfile);
                 }
             }
@@ -128,9 +135,13 @@ public class ProfileFragment extends Fragment {
 
     private void uploadImage () {
         if (imageUri != null) {
-            progressBar.setVisibility(ProgressBar.VISIBLE);
-            ((Activity) getContext()).getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+
+            //Alert builder
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setView(R.layout.progress_bar);
+            builder.setCancelable(false);
+            final AlertDialog alertDialog = builder.create();
+            alertDialog.show();
 
             final StorageReference fileStorageReference = storageReference.child(System.currentTimeMillis() + "." + getFileExtension(imageUri));
 
@@ -150,18 +161,19 @@ public class ProfileFragment extends Fragment {
                         Uri downloadUri = task.getResult();
                         String strUri = downloadUri.toString();
 
+                        reference = FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid());
                         HashMap<String, Object> map = new HashMap<>();
                         map.put("imageURL", strUri);
                         reference.updateChildren(map);
 
-                        progressBar.setVisibility(View.INVISIBLE);
+                        alertDialog.dismiss();
                     }
                 }
             }).addOnFailureListener(new OnFailureListener() {
                 @Override
                 public void onFailure(@NonNull Exception e) {
                     Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-                    progressBar.setVisibility(View.INVISIBLE);
+                    alertDialog.dismiss();
                 }
             });
         } else {
