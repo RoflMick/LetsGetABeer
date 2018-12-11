@@ -9,6 +9,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -17,6 +18,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.FileProvider;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.MimeTypeMap;
@@ -66,6 +68,13 @@ public class ProfileFragment extends Fragment {
     TextView username;
     ProgressBar progressBar;
     Button butDefaultImage;
+    Button butRecordAudio;
+    TextView labelRecordAudio;
+
+    //Audio
+    private MediaRecorder mediaRecorder;
+    private String audioFileName = null;
+    StorageReference audioStorageReference;
 
     //Firebase
     DatabaseReference reference;
@@ -96,12 +105,21 @@ public class ProfileFragment extends Fragment {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_profile, container, false);
 
+        //XML init
         imageProfile = view.findViewById(R.id.imageProfile);
         username = view.findViewById(R.id.username);
         progressBar = view.findViewById(R.id.progressBar);
         butDefaultImage = view.findViewById(R.id.butDefaultImage);
-        butOpenCamera = view.findViewById(R.id.buttonOpenCamera);
+        butOpenCamera = view.findViewById(R.id.butOpenCamera);
+        butRecordAudio = view.findViewById(R.id.butRecordAudio);
+        labelRecordAudio = view.findViewById(R.id.labelRecordAudio);
 
+        //Audio
+        audioFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
+        audioFileName += "/recorded_audio.3gp";
+        audioStorageReference = FirebaseStorage.getInstance().getReference();
+
+        //Firebase init
         firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         reference = FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid());
         storageReference = FirebaseStorage.getInstance().getReference("imageProfiles");
@@ -130,6 +148,7 @@ public class ProfileFragment extends Fragment {
             }
         });
 
+        //Accelerometer on shake
         accelerometerSensorEventListener = new SensorEventListener() {
             @Override
             public void onSensorChanged(SensorEvent event) {
@@ -151,6 +170,22 @@ public class ProfileFragment extends Fragment {
 
             }
         };
+
+        butRecordAudio.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    startRecording();
+                    labelRecordAudio.setText("Audio recording has started...");
+
+                } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    stopRecording();
+                    labelRecordAudio.setText("Audio recording has stopped...");
+                }
+                return false;
+            }
+        });
 
         //On Default Image Button Clicked
         butDefaultImage.setOnClickListener(new View.OnClickListener() {
@@ -193,6 +228,47 @@ public class ProfileFragment extends Fragment {
 
         return view;
     }
+
+    private void startRecording() {
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mediaRecorder.setOutputFile(audioFileName);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+
+        try {
+            mediaRecorder.prepare();
+        } catch (IOException e) {
+            Toast.makeText(getContext(), "prepare() failed" + e, Toast.LENGTH_SHORT).show();
+        }
+
+        mediaRecorder.start();
+    }
+
+    private void stopRecording() {
+        mediaRecorder.stop();
+        mediaRecorder.release();
+        mediaRecorder = null;
+
+        uploadAudio();
+    }
+
+    private void uploadAudio() {
+        alertDialog.show();
+
+        StorageReference fileStorageReference = audioStorageReference.child("Audio").child("audio_" + System.currentTimeMillis() + ".3gp");
+        Uri uri = Uri.fromFile(new File(audioFileName));
+
+        fileStorageReference.putFile(uri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+            @Override
+            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                alertDialog.dismiss();
+                Toast.makeText(getContext(), "Audio recording successfully uploaded.", Toast.LENGTH_SHORT).show();
+                labelRecordAudio.setText("Audio recording finished and has been uploaded.");
+            }
+        });
+    }
+
 
     private void openCamera() {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);

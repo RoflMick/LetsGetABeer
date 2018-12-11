@@ -51,14 +51,33 @@
             android:layout_marginTop="20dp"/>
 
         <Button
-            android:id="@+id/buttonOpenCamera"
+            android:id="@+id/butOpenCamera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
+            android:layout_toLeftOf="@id/imageProfile"
+            android:layout_alignTop="@id/imageProfile"
+            android:text="Camera Emulato" />
+
+        <Button
+            android:id="@+id/butRecordAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_below="@id/butDefaultImage"
+            android:layout_centerHorizontal="true"
+            android:text="Tap and hold to record audio"
+            android:layout_marginTop="20dp"/>
+
+        <TextView
+            android:id="@+id/labelRecordAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/butRecordAudio"
+            android:layout_centerHorizontal="true"
             android:layout_marginTop="20dp"
-            android:text="Button" />
-        
+            android:text="Tap and hold to start recording"/>
+
+
+
     </RelativeLayout>
 
 </RelativeLayout>
