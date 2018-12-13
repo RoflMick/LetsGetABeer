@@ -9,6 +9,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
@@ -17,6 +18,7 @@ import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.FileProvider;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -70,11 +72,13 @@ public class ProfileFragment extends Fragment {
     Button butDefaultImage;
     Button butRecordAudio;
     TextView labelRecordAudio;
+    TextView butPlayAudio;
 
     //Audio
     private MediaRecorder mediaRecorder;
     private String audioFileName = null;
     StorageReference audioStorageReference;
+    private Uri audioUri;
 
     //Firebase
     DatabaseReference reference;
@@ -113,6 +117,7 @@ public class ProfileFragment extends Fragment {
         butOpenCamera = view.findViewById(R.id.butOpenCamera);
         butRecordAudio = view.findViewById(R.id.butRecordAudio);
         labelRecordAudio = view.findViewById(R.id.labelRecordAudio);
+        butPlayAudio = view.findViewById(R.id.butPlayAudio);
 
         //Audio
         audioFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
@@ -171,10 +176,23 @@ public class ProfileFragment extends Fragment {
             }
         };
 
+        butPlayAudio.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    playAudio();
+                    butPlayAudio.setText("Stop Audio");
+                } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    stopAudio();
+                    butPlayAudio.setText("Play Audio");
+                }
+                return false;
+            }
+        });
+
         butRecordAudio.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     startRecording();
                     labelRecordAudio.setText("Audio recording has started...");
@@ -229,6 +247,30 @@ public class ProfileFragment extends Fragment {
         return view;
     }
 
+    //Audio stop playing
+    private void stopAudio() {
+
+    }
+
+    //Audio start playing
+    private void playAudio() {
+        final MediaPlayer mediaPlayer = new MediaPlayer();
+
+        try {
+            mediaPlayer.setDataSource(getContext(), audioUri);
+            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    mediaPlayer.start();
+                    Toast.makeText(getContext(), "Audio is being played.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } catch (Exception e) {
+            Log.d("MediaPlayer", "MediaPlayer error " + e);
+        }
+    }
+
+    //Audio start recording
     private void startRecording() {
         mediaRecorder = new MediaRecorder();
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -245,6 +287,7 @@ public class ProfileFragment extends Fragment {
         mediaRecorder.start();
     }
 
+    //Audio stop recording
     private void stopRecording() {
         mediaRecorder.stop();
         mediaRecorder.release();
@@ -253,13 +296,14 @@ public class ProfileFragment extends Fragment {
         uploadAudio();
     }
 
+    //Audio upload to Firebase
     private void uploadAudio() {
         alertDialog.show();
 
         StorageReference fileStorageReference = audioStorageReference.child("Audio").child("audio_" + System.currentTimeMillis() + ".3gp");
-        Uri uri = Uri.fromFile(new File(audioFileName));
+        audioUri = Uri.fromFile(new File(audioFileName));
 
-        fileStorageReference.putFile(uri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+        fileStorageReference.putFile(audioUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
             @Override
             public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                 alertDialog.dismiss();

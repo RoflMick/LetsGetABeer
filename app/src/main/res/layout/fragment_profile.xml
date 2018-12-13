@@ -76,7 +76,14 @@
             android:layout_marginTop="20dp"
             android:text="Tap and hold to start recording"/>
 
-
+        <Button
+            android:id="@+id/butPlayAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/labelRecordAudio"
+            android:layout_centerHorizontal="true"
+            android:text="Play audio"
+            android:layout_marginTop="20dp"/>
 
     </RelativeLayout>
 
