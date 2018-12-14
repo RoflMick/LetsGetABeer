@@ -71,14 +71,16 @@ public class ProfileFragment extends Fragment {
     ProgressBar progressBar;
     Button butDefaultImage;
     Button butRecordAudio;
-    TextView labelRecordAudio;
-    TextView butPlayAudio;
+    Button butPlayAudio;
+    Button butStopAudio;
+    TextView debugtext;
 
     //Audio
     private MediaRecorder mediaRecorder;
     private String audioFileName = null;
     StorageReference audioStorageReference;
     private Uri audioUri;
+    private MediaPlayer mediaPlayer;
 
     //Firebase
     DatabaseReference reference;
@@ -116,8 +118,10 @@ public class ProfileFragment extends Fragment {
         butDefaultImage = view.findViewById(R.id.butDefaultImage);
         butOpenCamera = view.findViewById(R.id.butOpenCamera);
         butRecordAudio = view.findViewById(R.id.butRecordAudio);
-        labelRecordAudio = view.findViewById(R.id.labelRecordAudio);
         butPlayAudio = view.findViewById(R.id.butPlayAudio);
+        butStopAudio = view.findViewById(R.id.butStopAudio);
+        butStopAudio.setEnabled(false);
+        debugtext = view.findViewById(R.id.debugtext);
 
         //Audio
         audioFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
@@ -176,17 +180,19 @@ public class ProfileFragment extends Fragment {
             }
         };
 
-        butPlayAudio.setOnTouchListener(new View.OnTouchListener() {
+        butPlayAudio.setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    playAudio();
-                    butPlayAudio.setText("Stop Audio");
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                    stopAudio();
-                    butPlayAudio.setText("Play Audio");
-                }
-                return false;
+            public void onClick(View v) {
+                butStopAudio.setEnabled(true);
+                playAudio();
+            }
+        });
+
+        butStopAudio.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                butStopAudio.setEnabled(false);
+                stopAudio();
             }
         });
 
@@ -195,11 +201,8 @@ public class ProfileFragment extends Fragment {
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     startRecording();
-                    labelRecordAudio.setText("Audio recording has started...");
-
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                     stopRecording();
-                    labelRecordAudio.setText("Audio recording has stopped...");
                 }
                 return false;
             }
@@ -249,29 +252,40 @@ public class ProfileFragment extends Fragment {
 
     //Audio stop playing
     private void stopAudio() {
-
+        mediaPlayer.stop();
+        Toast.makeText(getContext(), "Audio stopped.", Toast.LENGTH_SHORT).show();
     }
 
     //Audio start playing
     private void playAudio() {
-        final MediaPlayer mediaPlayer = new MediaPlayer();
+        mediaPlayer = new MediaPlayer();
 
         try {
             mediaPlayer.setDataSource(getContext(), audioUri);
-            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+
+            Toast.makeText(getContext(), "Audio is being played.", Toast.LENGTH_SHORT).show();
+
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
-                public void onPrepared(MediaPlayer mp) {
-                    mediaPlayer.start();
-                    Toast.makeText(getContext(), "Audio is being played.", Toast.LENGTH_SHORT).show();
+                public void onCompletion(MediaPlayer mp) {
+                    mediaPlayer.release();
+                    mediaPlayer = null;
+
+                    Toast.makeText(getContext(), "Audio has ended.", Toast.LENGTH_SHORT).show();
+                    butStopAudio.setEnabled(false);
                 }
             });
         } catch (Exception e) {
-            Log.d("MediaPlayer", "MediaPlayer error " + e);
+            e.printStackTrace();
         }
     }
 
     //Audio start recording
     private void startRecording() {
+        Toast.makeText(getContext(), "Audio recording has started...", Toast.LENGTH_SHORT).show();
+
         mediaRecorder = new MediaRecorder();
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
@@ -289,6 +303,8 @@ public class ProfileFragment extends Fragment {
 
     //Audio stop recording
     private void stopRecording() {
+        Toast.makeText(getContext(), "Audio recording has stopped.", Toast.LENGTH_SHORT).show();
+
         mediaRecorder.stop();
         mediaRecorder.release();
         mediaRecorder = null;
@@ -308,7 +324,6 @@ public class ProfileFragment extends Fragment {
             public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                 alertDialog.dismiss();
                 Toast.makeText(getContext(), "Audio recording successfully uploaded.", Toast.LENGTH_SHORT).show();
-                labelRecordAudio.setText("Audio recording finished and has been uploaded.");
             }
         });
     }

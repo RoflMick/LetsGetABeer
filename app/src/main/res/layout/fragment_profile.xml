@@ -67,23 +67,31 @@
             android:text="Tap and hold to record audio"
             android:layout_marginTop="20dp"/>
 
-        <TextView
-            android:id="@+id/labelRecordAudio"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/butRecordAudio"
-            android:layout_centerHorizontal="true"
-            android:layout_marginTop="20dp"
-            android:text="Tap and hold to start recording"/>
-
         <Button
             android:id="@+id/butPlayAudio"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@id/labelRecordAudio"
-            android:layout_centerHorizontal="true"
+            android:layout_below="@id/butRecordAudio"
+            android:layout_alignStart="@id/butRecordAudio"
             android:text="Play audio"
             android:layout_marginTop="20dp"/>
+
+        <Button
+            android:id="@+id/butStopAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/butRecordAudio"
+            android:layout_alignEnd="@id/butRecordAudio"
+            android:text="Stop audio"
+            android:layout_marginTop="20dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/imageProfile"
+            android:layout_alignTop="@id/imageProfile"
+            android:text="texttx"
+            android:id="@+id/debugtext"/>
 
     </RelativeLayout>
 

@@ -5,11 +5,13 @@ public class User {
     private String id;
     private String username;
     private String imageURL;
+    private String audioURL;
 
-    public User(String id, String username, String imageURL) {
+    public User(String id, String username, String imageURL, String audioURL) {
         this.id = id;
         this.username = username;
         this.imageURL = imageURL;
+        this.audioURL = audioURL;
     }
 
     public User() {
@@ -37,5 +39,13 @@ public class User {
 
     public void setImageURL(String imageURL) {
         this.imageURL = imageURL;
+    }
+
+    public String getAudioURL() {
+        return audioURL;
+    }
+
+    public void setAudioURL(String audioURL) {
+        this.audioURL = audioURL;
     }
 }
