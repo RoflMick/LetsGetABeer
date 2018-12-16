@@ -45,18 +45,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/butDefaultImage"
-            android:text="Default Image"
+            android:text="Default\nImage"
             android:layout_below="@id/username"
-            android:layout_centerHorizontal="true"
+            android:layout_alignStart="@id/butRecordAudio"
             android:layout_marginTop="20dp"/>
 
         <Button
-            android:id="@+id/butOpenCamera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_toLeftOf="@id/imageProfile"
-            android:layout_alignTop="@id/imageProfile"
-            android:text="Camera Emulato" />
+            android:id="@+id/butDefaultAudio"
+            android:text="Default\nAudio"
+            android:layout_below="@id/username"
+            android:layout_alignEnd="@id/butRecordAudio"
+            android:layout_marginTop="20dp"/>
 
         <Button
             android:id="@+id/butRecordAudio"
@@ -84,14 +85,6 @@
             android:layout_alignEnd="@id/butRecordAudio"
             android:text="Stop audio"
             android:layout_marginTop="20dp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_toRightOf="@id/imageProfile"
-            android:layout_alignTop="@id/imageProfile"
-            android:text="texttx"
-            android:id="@+id/debugtext"/>
 
     </RelativeLayout>
 

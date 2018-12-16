@@ -2,7 +2,6 @@ package com.example.mikulash.firebasechatapp.Fragments;
 
 import android.app.AlertDialog;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.hardware.Sensor;
@@ -17,8 +16,6 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.FileProvider;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -52,8 +49,6 @@ import com.google.firebase.storage.UploadTask;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -62,32 +57,30 @@ import static android.app.Activity.RESULT_OK;
 
 public class ProfileFragment extends Fragment {
 
-    //TODO
-    Button butOpenCamera;
-
     //Layout
     CircleImageView imageProfile;
     TextView username;
     ProgressBar progressBar;
     Button butDefaultImage;
+    Button butDefaultAudio;
     Button butRecordAudio;
     Button butPlayAudio;
     Button butStopAudio;
-    TextView debugtext;
 
     //Audio
     private MediaRecorder mediaRecorder;
     private String audioFileName = null;
     StorageReference audioStorageReference;
     private Uri audioUri;
+    private Uri userAudioUri;
     private MediaPlayer mediaPlayer;
 
     //Firebase
     DatabaseReference reference;
     FirebaseUser firebaseUser;
 
-    //Storage
-    StorageReference storageReference;
+    //Image
+    StorageReference imageStorageReference;
     private static final int PROFILE_IMAGE_REQUEST = 1;
     private static final int PROFILE_CAMERA_REQUEST = 2;
     private Uri imageUri;
@@ -101,9 +94,9 @@ public class ProfileFragment extends Fragment {
     private SensorManager sensorManager;
     private Sensor accelerometerSensor;
     private SensorEventListener accelerometerSensorEventListener;
-    private float mAccel; //acceleration apart from gravity
-    private float mAccelCurrent; //current acceleration including gravity
-    private float mAccelLast; //last acceleration including gravity
+    private float mAccel;
+    private float mAccelCurrent;
+    private float mAccelLast;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -116,22 +109,21 @@ public class ProfileFragment extends Fragment {
         username = view.findViewById(R.id.username);
         progressBar = view.findViewById(R.id.progressBar);
         butDefaultImage = view.findViewById(R.id.butDefaultImage);
-        butOpenCamera = view.findViewById(R.id.butOpenCamera);
+        butDefaultAudio = view.findViewById(R.id.butDefaultAudio);
         butRecordAudio = view.findViewById(R.id.butRecordAudio);
         butPlayAudio = view.findViewById(R.id.butPlayAudio);
         butStopAudio = view.findViewById(R.id.butStopAudio);
         butStopAudio.setEnabled(false);
-        debugtext = view.findViewById(R.id.debugtext);
 
         //Audio
         audioFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
         audioFileName += "/recorded_audio.3gp";
-        audioStorageReference = FirebaseStorage.getInstance().getReference();
+        audioStorageReference = FirebaseStorage.getInstance().getReference("audio");
 
         //Firebase init
         firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         reference = FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid());
-        storageReference = FirebaseStorage.getInstance().getReference("imageProfiles");
+        imageStorageReference = FirebaseStorage.getInstance().getReference("imageProfiles");
 
         //AlertDialog
         builder = new AlertDialog.Builder(getContext());
@@ -148,14 +140,6 @@ public class ProfileFragment extends Fragment {
         if (accelerometerSensor == null) {
             Toast.makeText(getContext(), "Device does not support Accelerometer features.", Toast.LENGTH_SHORT).show();
         }
-
-        //TODO
-        butOpenCamera.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openCamera();
-            }
-        });
 
         //Accelerometer on shake
         accelerometerSensorEventListener = new SensorEventListener() {
@@ -208,6 +192,15 @@ public class ProfileFragment extends Fragment {
             }
         });
 
+        //On Default Audio Button Clicked
+        butDefaultAudio.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                reference.child("audioURL").setValue("default");
+                Toast.makeText(getContext(), "Audio recording has been set to default.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         //On Default Image Button Clicked
         butDefaultImage.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -223,6 +216,7 @@ public class ProfileFragment extends Fragment {
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 User user = dataSnapshot.getValue(User.class);
                 username.setText(user.getUsername());
+
                 if (user.getImageURL().equals("default")) {
                     imageProfile.setImageResource(R.drawable.default_profile);
                 } else {
@@ -230,6 +224,14 @@ public class ProfileFragment extends Fragment {
                         return;
                     }
                     Glide.with(getContext()).load(user.getImageURL()).into(imageProfile);
+                }
+
+                if (user.getAudioURL().equals("default")) {
+                    butPlayAudio.setEnabled(false);
+                } else {
+                    butPlayAudio.setEnabled(true);
+                    mediaPlayer = new MediaPlayer();
+                    userAudioUri = Uri.parse(user.getAudioURL());
                 }
             }
 
@@ -258,20 +260,17 @@ public class ProfileFragment extends Fragment {
 
     //Audio start playing
     private void playAudio() {
-        mediaPlayer = new MediaPlayer();
-
         try {
-            mediaPlayer.setDataSource(getContext(), audioUri);
+            mediaPlayer.reset();
+            mediaPlayer.setDataSource(getContext(), userAudioUri);
             mediaPlayer.prepare();
             mediaPlayer.start();
-
+            butStopAudio.setEnabled(true);
             Toast.makeText(getContext(), "Audio is being played.", Toast.LENGTH_SHORT).show();
 
             mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
-                    mediaPlayer.release();
-                    mediaPlayer = null;
 
                     Toast.makeText(getContext(), "Audio has ended.", Toast.LENGTH_SHORT).show();
                     butStopAudio.setEnabled(false);
@@ -297,7 +296,6 @@ public class ProfileFragment extends Fragment {
         } catch (IOException e) {
             Toast.makeText(getContext(), "prepare() failed" + e, Toast.LENGTH_SHORT).show();
         }
-
         mediaRecorder.start();
     }
 
@@ -316,18 +314,37 @@ public class ProfileFragment extends Fragment {
     private void uploadAudio() {
         alertDialog.show();
 
-        StorageReference fileStorageReference = audioStorageReference.child("Audio").child("audio_" + System.currentTimeMillis() + ".3gp");
+        final StorageReference fileStorageReference = audioStorageReference.child("audio_" + System.currentTimeMillis() + ".3gp");
         audioUri = Uri.fromFile(new File(audioFileName));
 
-        fileStorageReference.putFile(audioUri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+        //Put image to Firebase
+        uploadStorageTask = fileStorageReference.putFile(audioUri);
+        uploadStorageTask.continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
             @Override
-            public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                alertDialog.dismiss();
-                Toast.makeText(getContext(), "Audio recording successfully uploaded.", Toast.LENGTH_SHORT).show();
+            public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
+                if (!task.isSuccessful()) {
+                    throw task.getException();
+                }
+                return fileStorageReference.getDownloadUrl();
+            }
+        }).addOnCompleteListener(new OnCompleteListener<Uri>() {
+            @Override
+            public void onComplete(@NonNull Task<Uri> task) {
+                if (task.isSuccessful()) {
+                    Uri downloadUri = task.getResult();
+                    String strUri = downloadUri.toString();
+
+                    reference = FirebaseDatabase.getInstance().getReference("Users").child(firebaseUser.getUid());
+                    HashMap<String, Object> map = new HashMap<>();
+                    map.put("audioURL", strUri);
+                    reference.updateChildren(map);
+
+                    alertDialog.dismiss();
+                    Toast.makeText(getContext(), "Audio recording successfully uploaded.", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
-
 
     private void openCamera() {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -338,6 +355,17 @@ public class ProfileFragment extends Fragment {
     public void onResume() {
         super.onResume();
         sensorManager.registerListener(accelerometerSensorEventListener, accelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+        }
     }
 
     @Override
@@ -363,7 +391,7 @@ public class ProfileFragment extends Fragment {
         if (imageUri != null) {
             alertDialog.show();
 
-            final StorageReference fileStorageReference = storageReference.child(System.currentTimeMillis() + "." + getFileExtension(imageUri));
+            final StorageReference fileStorageReference = imageStorageReference.child(System.currentTimeMillis() + "." + getFileExtension(imageUri));
 
             //Put image to Firebase
             uploadStorageTask = fileStorageReference.putFile(imageUri);
@@ -412,7 +440,7 @@ public class ProfileFragment extends Fragment {
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
         byte[] dataBAOS = baos.toByteArray();
 
-        final StorageReference bitmapStorageReference = storageReference.child(System.currentTimeMillis() + "_cameraBitmap");
+        final StorageReference bitmapStorageReference = imageStorageReference.child(System.currentTimeMillis() + "_cameraBitmap");
 
         //Put image to Firebase
         uploadStorageTask = bitmapStorageReference.putBytes(dataBAOS);
@@ -464,20 +492,6 @@ public class ProfileFragment extends Fragment {
             } else {
                 uploadCameraImage(data);
             }
-//            fileStorageReference.putFile(photoURI).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-//                @Override
-//                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-//                    alertDialog.dismiss();
-//                    Toast.makeText(getContext(), "succesdasfsdf", Toast.LENGTH_SHORT).show();
-//                }
-//            });
-
-            /*
-            if (uploadStorageTask != null && uploadStorageTask.isInProgress()) {
-                Toast.makeText(getContext(), "Photo Uploading is in progress.", Toast.LENGTH_SHORT).show();
-            } else {
-                uploadImage();
-            }*/
         }
     }
 }

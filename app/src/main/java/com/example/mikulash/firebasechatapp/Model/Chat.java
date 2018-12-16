@@ -8,12 +8,14 @@ public class Chat {
     private String to;
     private String message;
     private Date dateTime;
+    private String type;
 
-    public Chat(String from, String to, String message, Date dateTime) {
+    public Chat(String from, String to, String message, Date dateTime, String type) {
         this.from = from;
         this.to = to;
         this.message = message;
         this.dateTime = dateTime;
+        this.type = type;
     }
 
     public Chat() {
@@ -49,5 +51,13 @@ public class Chat {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

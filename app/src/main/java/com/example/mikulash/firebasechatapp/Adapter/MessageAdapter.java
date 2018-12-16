@@ -57,7 +57,14 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
 
         Chat chat = mChat.get(position);
 
-        holder.show_message.setText(chat.getMessage());
+        String messageType = chat.getType();
+        if (messageType.equals("text")) {
+            holder.show_message.setText(chat.getMessage());
+            //holder.photoView.setVisibility(View.INVISIBLE);
+        } else {
+            holder.show_message.setVisibility(View.INVISIBLE);
+            //Glide.with(mContext).load(chat.getMessage()).into(holder.photoView);
+        }
 
         simpleDateFormat = new SimpleDateFormat("HH:mm   dd.MM. yyyy");
         holder.show_time.setText(simpleDateFormat.format(chat.getDateTime()));
@@ -79,6 +86,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
         public TextView show_message;
         public TextView show_time;
         public ImageView imageProfile;
+        public ImageView photoView;
 
         public ViewHolder(View itemView) {
             super(itemView);
@@ -86,6 +94,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.ViewHold
             show_message = itemView.findViewById(R.id.show_message);
             show_time = itemView.findViewById(R.id.show_time);
             imageProfile = itemView.findViewById(R.id.imageProfile);
+            photoView = itemView.findViewById(R.id.photoView);
         }
     }
 
